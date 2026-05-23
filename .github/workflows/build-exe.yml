@@ -42,11 +42,18 @@ jobs:
         working-directory: curam_pc_app
         run: npm install
 
-      - name: Fix invalid small icon
+      - name: Fix package and remove bad icon
         working-directory: curam_pc_app
         shell: powershell
         run: |
           node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.author=p.author||'CURAM EARTHWORKING INC GUTALAC'; if(p.build){ delete p.build.icon; if(p.build.win) delete p.build.win.icon; if(p.build.nsis){ delete p.build.nsis.installerIcon; delete p.build.nsis.uninstallerIcon; }} fs.writeFileSync('package.json', JSON.stringify(p,null,2));"
+
+          if (Test-Path "build\icon.ico") {
+            Remove-Item "build\icon.ico" -Force
+            Write-Host "Removed invalid small icon.ico"
+          }
+
+          Get-ChildItem build -ErrorAction SilentlyContinue
           type package.json
 
       - name: Build Windows EXE
