@@ -20,24 +20,44 @@ jobs:
           node-version: "20"
 
       - name: Unzip CURAM EXE source
-        shell: pwsh
+        shell: powershell
         run: |
-          if (Test-Path curam_pc_app) { Remove-Item curam_pc_app -Recurse -Force }
+          Remove-Item -Recurse -Force curam_pc_app -ErrorAction SilentlyContinue
           Expand-Archive -Path curam_exe_source.zip -DestinationPath curam_pc_app -Force
+
+          $pkg = Get-ChildItem -Path curam_pc_app -Filter package.json -Recurse | Select-Object -First 1
+          if ($null -eq $pkg) {
+            Write-Error "package.json not found inside curam_exe_source.zip"
+            exit 1
+          }
+
+          $root = Resolve-Path curam_pc_app
+          if ($pkg.Directory.FullName -ne $root.Path) {
+            Copy-Item -Path "$($pkg.Directory.FullName)\*" -Destination curam_pc_app -Recurse -Force
+          }
+
           Get-ChildItem curam_pc_app
 
       - name: Install dependencies
         working-directory: curam_pc_app
         run: npm install
 
+      - name: Fix invalid small icon
+        working-directory: curam_pc_app
+        shell: powershell
+        run: |
+          node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.author=p.author||'CURAM EARTHWORKING INC GUTALAC'; if(p.build){ delete p.build.icon; if(p.build.win) delete p.build.win.icon; if(p.build.nsis){ delete p.build.nsis.installerIcon; delete p.build.nsis.uninstallerIcon; }} fs.writeFileSync('package.json', JSON.stringify(p,null,2));"
+          type package.json
+
       - name: Build Windows EXE
         working-directory: curam_pc_app
         run: npm run dist
 
-      - name: Upload Windows installer and portable EXE
+      - name: Upload EXE files
         uses: actions/upload-artifact@v4
         with:
           name: CURAM-GUTALAC-Windows-EXE
           path: |
             curam_pc_app/dist/*.exe
+            curam_pc_app/dist/*.zip
             curam_pc_app/dist/*.blockmap
