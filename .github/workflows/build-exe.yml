@@ -1,0 +1,43 @@
+name: Build CURAM Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-exe:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Unzip CURAM EXE source
+        shell: pwsh
+        run: |
+          if (Test-Path curam_pc_app) { Remove-Item curam_pc_app -Recurse -Force }
+          Expand-Archive -Path curam_exe_source.zip -DestinationPath curam_pc_app -Force
+          Get-ChildItem curam_pc_app
+
+      - name: Install dependencies
+        working-directory: curam_pc_app
+        run: npm install
+
+      - name: Build Windows EXE
+        working-directory: curam_pc_app
+        run: npm run dist
+
+      - name: Upload Windows installer and portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: CURAM-GUTALAC-Windows-EXE
+          path: |
+            curam_pc_app/dist/*.exe
+            curam_pc_app/dist/*.blockmap
