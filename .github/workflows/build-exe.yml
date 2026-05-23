@@ -42,18 +42,23 @@ jobs:
         working-directory: curam_pc_app
         run: npm install
 
-      - name: Fix package and remove bad icon
+      - name: Apply CURAM CE Windows icon
         working-directory: curam_pc_app
         shell: powershell
         run: |
-          node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.author=p.author||'CURAM EARTHWORKING INC GUTALAC'; if(p.build){ delete p.build.icon; if(p.build.win) delete p.build.win.icon; if(p.build.nsis){ delete p.build.nsis.installerIcon; delete p.build.nsis.uninstallerIcon; }} fs.writeFileSync('package.json', JSON.stringify(p,null,2));"
+          New-Item -ItemType Directory -Force -Path build | Out-Null
 
-          if (Test-Path "build\icon.ico") {
-            Remove-Item "build\icon.ico" -Force
-            Write-Host "Removed invalid small icon.ico"
+          if (Test-Path "..\icon.ico") {
+            Copy-Item "..\icon.ico" "build\icon.ico" -Force
+            Write-Host "CURAM CE icon copied to build\icon.ico"
+          } else {
+            Write-Error "icon.ico not found in repository root. Please upload icon.ico beside curam_exe_source.zip"
+            exit 1
           }
 
-          Get-ChildItem build -ErrorAction SilentlyContinue
+          node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.author=p.author||'CURAM EARTHWORKING INC GUTALAC'; p.build=p.build||{}; p.build.icon='build/icon.ico'; p.build.win=p.build.win||{}; p.build.win.icon='build/icon.ico'; p.build.nsis=p.build.nsis||{}; p.build.nsis.installerIcon='build/icon.ico'; p.build.nsis.uninstallerIcon='build/icon.ico'; fs.writeFileSync('package.json', JSON.stringify(p,null,2));"
+
+          Get-ChildItem build
           type package.json
 
       - name: Build Windows EXE
