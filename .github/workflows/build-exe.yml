@@ -19,57 +19,28 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Unzip CURAM EXE source
+      - name: Extract CURAM EXE source
         shell: powershell
         run: |
-          Remove-Item -Recurse -Force curam_pc_app -ErrorAction SilentlyContinue
-          Expand-Archive -Path curam_exe_source.zip -DestinationPath curam_pc_app -Force
-
-          $pkg = Get-ChildItem -Path curam_pc_app -Filter package.json -Recurse | Select-Object -First 1
-          if ($null -eq $pkg) {
-            Write-Error "package.json not found inside curam_exe_source.zip"
-            exit 1
+          if (Test-Path "curam_exe_app") {
+            Remove-Item -Recurse -Force "curam_exe_app"
           }
-
-          $root = Resolve-Path curam_pc_app
-          if ($pkg.Directory.FullName -ne $root.Path) {
-            Copy-Item -Path "$($pkg.Directory.FullName)\*" -Destination curam_pc_app -Recurse -Force
-          }
-
-          Get-ChildItem curam_pc_app
+          Expand-Archive -Path "curam_exe_source.zip" -DestinationPath "curam_exe_app" -Force
+          Get-ChildItem "curam_exe_app"
 
       - name: Install dependencies
-        working-directory: curam_pc_app
+        working-directory: curam_exe_app
         run: npm install
 
-      - name: Apply CURAM CE Windows icon
-        working-directory: curam_pc_app
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path build | Out-Null
-
-          if (Test-Path "..\icon.ico") {
-            Copy-Item "..\icon.ico" "build\icon.ico" -Force
-            Write-Host "CURAM CE icon copied to build\icon.ico"
-          } else {
-            Write-Error "icon.ico not found in repository root. Please upload icon.ico beside curam_exe_source.zip"
-            exit 1
-          }
-
-          node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.author=p.author||'CURAM EARTHWORKING INC GUTALAC'; p.build=p.build||{}; p.build.icon='build/icon.ico'; p.build.win=p.build.win||{}; p.build.win.icon='build/icon.ico'; p.build.nsis=p.build.nsis||{}; p.build.nsis.installerIcon='build/icon.ico'; p.build.nsis.uninstallerIcon='build/icon.ico'; fs.writeFileSync('package.json', JSON.stringify(p,null,2));"
-
-          Get-ChildItem build
-          type package.json
-
       - name: Build Windows EXE
-        working-directory: curam_pc_app
+        working-directory: curam_exe_app
         run: npm run dist
 
-      - name: Upload EXE files
+      - name: Upload Windows EXE
         uses: actions/upload-artifact@v4
         with:
-          name: CURAM-GUTALAC-Windows-EXE
+          name: CURAM-GUTALAC-PC-USER-DATABASE-EXE
           path: |
-            curam_pc_app/dist/*.exe
-            curam_pc_app/dist/*.zip
-            curam_pc_app/dist/*.blockmap
+            curam_exe_app/dist/*.exe
+            curam_exe_app/dist/*.msi
+            curam_exe_app/dist/*.zip
