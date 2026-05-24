@@ -39,7 +39,7 @@ jobs:
       - name: Upload Windows EXE
         uses: actions/upload-artifact@v4
         with:
-          name: CURAM-GUTALAC-PC-DATABASE-V33-SYNC-EXE
+          name: CURAM-GUTALAC-V32-SYNC-ONLY-PC-NAV-FIX-EXE
           path: |
             curam_exe_app/dist/*.exe
             curam_exe_app/dist/*.msi
